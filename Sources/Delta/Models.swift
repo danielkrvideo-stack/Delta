@@ -92,6 +92,7 @@ final class BrowserStore: ObservableObject {
     @Published var bookmarks: [BrowserItem] = []
     @Published var history: [BrowserItem] = []
     @Published var downloads: [DownloadItem] = []
+    @Published var documentOpenError: String?
 
     private var tabSubscriptions: [UUID: AnyCancellable] = [:]
     private let defaults = UserDefaults.standard
@@ -182,6 +183,10 @@ final class BrowserStore: ObservableObject {
         guard let tab = tab ?? selectedTab else { return }
         let text = input.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
+        if text.hasPrefix("/") {
+            openHTMLFile(URL(fileURLWithPath: text), in: tab)
+            return
+        }
         if text.caseInsensitiveCompare("about") == .orderedSame ||
             text.caseInsensitiveCompare("about:blank") == .orderedSame {
             showAbout(in: tab)
@@ -190,7 +195,11 @@ final class BrowserStore: ObservableObject {
 
         let destination: URL?
         if let parsed = URL(string: text), let scheme = parsed.scheme?.lowercased(),
-           ["http", "https"].contains(scheme), parsed.host != nil {
+           scheme == "file", parsed.isFileURL {
+            openHTMLFile(parsed, in: tab)
+            return
+        } else if let parsed = URL(string: text), let scheme = parsed.scheme?.lowercased(),
+                  ["http", "https"].contains(scheme), parsed.host != nil {
             destination = parsed
         } else if !text.contains(where: \.isWhitespace),
                   text.contains("."),
@@ -217,6 +226,30 @@ final class BrowserStore: ObservableObject {
         tab.title = "Загрузка…"
         tab.address = destination.absoluteString
         tab.webView.load(URLRequest(url: destination, cachePolicy: .useProtocolCachePolicy, timeoutInterval: 120))
+        persistOpenTabs()
+    }
+
+    func openHTMLFile(_ url: URL, in existingTab: BrowserTab? = nil) {
+        let fileURL = url.standardizedFileURL
+        let supportedExtensions = ["html", "htm", "xhtml"]
+        guard fileURL.isFileURL, supportedExtensions.contains(fileURL.pathExtension.lowercased()) else {
+            documentOpenError = "Delta может открыть HTML-файлы с расширением .html, .htm или .xhtml."
+            return
+        }
+        guard FileManager.default.isReadableFile(atPath: fileURL.path) else {
+            documentOpenError = "Файл не найден или у Delta нет прав на его чтение."
+            return
+        }
+
+        let tab = existingTab ?? BrowserTab()
+        if existingTab == nil { register(tab) }
+        tab.isHome = false
+        tab.isAbout = false
+        tab.isOffline = false
+        tab.loadError = nil
+        tab.title = "Загрузка…"
+        tab.address = fileURL.absoluteString
+        tab.webView.loadFileURL(fileURL, allowingReadAccessTo: fileURL.deletingLastPathComponent())
         persistOpenTabs()
     }
 
