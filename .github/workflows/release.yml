@@ -21,7 +21,7 @@ jobs:
           DELTA_BUILD_NUMBER: ${{ github.run_number }}
         run: |
           VERSION="${DELTA_VERSION#v}"
-          DELTA_VERSION="$VERSION" ./build-app.sh
+          DELTA_VERSION="$VERSION" bash ./build-app.sh
 
       - name: Package Intel app
         run: |
