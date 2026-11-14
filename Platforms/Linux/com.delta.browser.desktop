@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Delta
+Comment=Delta web browser
+Exec=delta %U
+Icon=delta
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;application/xhtml+xml;x-scheme-handler/http;x-scheme-handler/https;
