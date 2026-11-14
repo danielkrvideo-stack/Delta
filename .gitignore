@@ -24,12 +24,15 @@ playground.xcworkspace
 # Package.pins
 # Package.resolved
 # *.xcodeproj
-#
 # Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
 # hence it is not needed unless you have added a package configuration file to your project
 # .swiftpm
 
 .build/
+Delta.app/
+.DS_Store
+.vscode/
+.swiftpm/
 
 # CocoaPods
 #
@@ -51,7 +54,7 @@ Carthage/Build/
 
 # fastlane
 #
-# It is recommended to not store the screenshots in the git repo.
+# It is recommended not to store the screenshots in the git repo.
 # Instead, use fastlane to re-generate the screenshots whenever they are needed.
 # For more information about the recommended setup visit:
 # https://docs.fastlane.tools/best-practices/source-control/#source-control
@@ -60,3 +63,11 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+Platforms/**/bin/
+Platforms/**/obj/
+Platforms/**/__pycache__/
+Delta-macos-intel-*.dmg
+Delta-windows-x64-*.msi
+Delta-windows-x64-*.zip
+Delta-linux-*.deb
