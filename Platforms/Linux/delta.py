@@ -252,7 +252,9 @@ class DeltaWindow(Gtk.Window):
             game = Path(__file__).resolve().parents[1] / "Shared" / "dino.html"
             if not game.is_file():
                 raise RuntimeError("Bundled offline game is missing")
-            self.new_tab(game.resolve().as_uri(), save=False)
+            game_uri = game.resolve().as_uri()
+            print(f"Delta Linux smoke test: opening local game {game_uri}", flush=True)
+            self.new_tab(game_uri, save=False)
             if self.notebook.get_n_pages() != 2:
                 raise RuntimeError("Opening the local offline game tab failed")
 
@@ -270,7 +272,10 @@ class DeltaWindow(Gtk.Window):
             if "Нет подключения к интернету" not in title:
                 if time.monotonic() < self.smoke_deadline:
                     return GLib.SOURCE_CONTINUE
-                raise RuntimeError(f"Local Dino page did not finish loading: {title!r}")
+                raise RuntimeError(
+                    f"Local Dino page did not finish loading: title={title!r}, "
+                    f"uri={game_view.get_uri()!r}, status={self.status.get_text()!r}"
+                )
             self.state["preferences"]["theme"] = "Dark"
             save_state(self.state)
             saved = json.loads(STATE_PATH.read_text(encoding="utf-8"))
@@ -377,6 +382,12 @@ class DeltaWindow(Gtk.Window):
         webview.load_uri(base + quote(text))
 
     def on_load_changed(self, webview, event):
+        if getattr(self, "smoke_test", False):
+            print(
+                f"Delta Linux smoke test: WebKit load {event.name}: "
+                f"{webview.get_uri()!r} ({webview.get_title()!r})",
+                flush=True,
+            )
         if event == WebKit2.LoadEvent.STARTED:
             if webview == self.current_view():
                 self.status.set_text("Загрузка…")
@@ -394,6 +405,12 @@ class DeltaWindow(Gtk.Window):
             self.save_tabs()
 
     def on_load_failed(self, webview, event, failing_uri, error):
+        if getattr(self, "smoke_test", False):
+            print(
+                f"Delta Linux smoke test: load failed for {failing_uri!r}: {error}",
+                file=sys.stderr,
+                flush=True,
+            )
         monitor = Gio.NetworkMonitor.get_default()
         disconnected = not monitor.get_network_available()
         if hasattr(monitor, "get_connectivity"):
