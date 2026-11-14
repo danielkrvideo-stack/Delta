@@ -100,9 +100,9 @@ func run(_ arguments: InstallerArguments) throws {
     let architectureCheck = Process()
     architectureCheck.executableURL = URL(fileURLWithPath: "/usr/bin/lipo")
     architectureCheck.arguments = [
+        extractedApp.appendingPathComponent("Contents/MacOS/\(executable)").path,
         "-verify_arch",
-        "x86_64",
-        extractedApp.appendingPathComponent("Contents/MacOS/\(executable)").path
+        "x86_64"
     ]
     try architectureCheck.run()
     architectureCheck.waitUntilExit()
