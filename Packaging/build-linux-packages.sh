@@ -32,13 +32,28 @@ if command -v rpmbuild >/dev/null 2>&1; then
   tar -C "$TOP/SOURCES" -czf "$TOP/SOURCES/delta-browser-$VERSION.tar.gz" "delta-browser-$VERSION"
   rpmbuild -bb Packaging/delta-browser.spec \
     --define "_topdir $TOP" --define "version $VERSION" --define "release 1"
-  find "$TOP/RPMS" -name '*.rpm' -exec cp {} "$ROOT/" \;
+  RPM_PACKAGE="$(find "$TOP/RPMS" -type f -name '*.rpm' -print -quit)"
+  if [[ -z "$RPM_PACKAGE" ]]; then
+    echo "RPM build completed without producing an RPM package." >&2
+    exit 1
+  fi
+  cp "$RPM_PACKAGE" "$ROOT/Delta-linux-x86_64-$VERSION.rpm"
 else
   echo "rpmbuild not installed; RPM build skipped." >&2
 fi
 
 if command -v appimage-builder >/dev/null 2>&1; then
-  DELTA_VERSION="$VERSION" appimage-builder --recipe Packaging/appimage-builder.yml
+  APPIMAGE_RECIPE="$ROOT/.build/appimage-builder.yml"
+  sed "s/^    version: .*/    version: $VERSION/" \
+    Packaging/appimage-builder.yml > "$APPIMAGE_RECIPE"
+  DELTA_VERSION="$VERSION" appimage-builder --recipe "$APPIMAGE_RECIPE"
+  APPIMAGE_PACKAGE="$(find "$ROOT" -maxdepth 4 -type f -name '*.AppImage' \
+    ! -path "$ROOT/Delta-linux-x86_64-$VERSION.AppImage" -print -quit)"
+  if [[ -z "$APPIMAGE_PACKAGE" ]]; then
+    echo "AppImage build completed without producing an AppImage." >&2
+    exit 1
+  fi
+  mv "$APPIMAGE_PACKAGE" "$ROOT/Delta-linux-x86_64-$VERSION.AppImage"
 else
   echo "appimage-builder not installed; AppImage build skipped." >&2
 fi
