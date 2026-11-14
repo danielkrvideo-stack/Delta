@@ -1,4 +1,4 @@
-name: Build and publish Intel release
+name: Build and publish cross-platform release
 
 on:
   push:
@@ -9,7 +9,7 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  build-macos:
     runs-on: macos-15-intel
     steps:
       - name: Check out source
@@ -28,19 +28,112 @@ jobs:
           ditto -c -k --sequesterRsrc --keepParent Delta.app Delta-macos-intel.zip
           shasum -a 256 Delta-macos-intel.zip > Delta-macos-intel.zip.sha256
 
-      - name: Publish GitHub release
+      - name: Upload macOS release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: |
+            Delta-macos-intel.zip
+            Delta-macos-intel.zip.sha256
+          if-no-files-found: error
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Install WiX v4
+        run: dotnet tool install --global wix --version 4.0.5
+
+      - name: Build Windows x64 app and installer
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME -replace '^v', ''
+          ./Packaging/Windows/build.ps1 -Version $version
+          $msi = "Delta-windows-x64-$version.msi"
+          $zip = "Delta-windows-x64-$version.zip"
+          if (!(Test-Path $msi)) { throw "Windows MSI was not created." }
+          if (!(Test-Path $zip)) { throw "Portable Windows package was not created." }
+          foreach ($file in @($msi, $zip)) {
+            $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+            "$hash  $file" | Set-Content "$file.sha256"
+          }
+
+      - name: Upload Windows release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-windows
+          path: |
+            Delta-windows-x64-*.msi
+            Delta-windows-x64-*.msi.sha256
+            Delta-windows-x64-*.zip
+            Delta-windows-x64-*.zip.sha256
+          if-no-files-found: error
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Install Linux packaging tools and WebKitGTK
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg-dev gir1.2-gtk-3.0 gir1.2-webkit2-4.0 \
+            libfuse2 libwebkit2gtk-4.0-37 pipx python3-gi rpm
+          pipx install appimage-builder
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build DEB, RPM, and AppImage packages
+        env:
+          DELTA_VERSION: ${{ github.ref_name }}
+        run: |
+          VERSION="${DELTA_VERSION#v}"
+          DELTA_VERSION="$VERSION" bash Packaging/build-linux-packages.sh
+          for package in \
+            "Delta-linux-amd64-$VERSION.deb" \
+            "Delta-linux-x86_64-$VERSION.rpm" \
+            "Delta-linux-x86_64-$VERSION.AppImage"; do
+            test -s "$package" || { echo "Missing Linux package: $package"; exit 1; }
+          done
+          chmod +x "Delta-linux-x86_64-$VERSION.AppImage"
+          sha256sum Delta-linux-* > Delta-linux-SHA256SUMS
+
+      - name: Upload Linux release assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-linux
+          path: |
+            Delta-linux-*.deb
+            Delta-linux-*.rpm
+            Delta-linux-*.AppImage
+            Delta-linux-SHA256SUMS
+          if-no-files-found: error
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [build-macos, build-windows, build-linux]
+    steps:
+      - name: Download release assets
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-*
+          path: release-assets
+          merge-multiple: true
+
+      - name: Publish assets to GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" \
-              Delta-macos-intel.zip \
-              Delta-macos-intel.zip.sha256 \
-              --clobber
-          else
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || \
             gh release create "$GITHUB_REF_NAME" \
-              Delta-macos-intel.zip \
-              Delta-macos-intel.zip.sha256 \
               --title "Delta $GITHUB_REF_NAME" \
               --generate-notes
-          fi
+          gh release upload "$GITHUB_REF_NAME" release-assets/* --clobber
