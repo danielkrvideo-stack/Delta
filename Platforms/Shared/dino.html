@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Delta — Нет подключения к интернету</title>
+<style>
+:root{color-scheme:light}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0}
+body{display:grid;place-items:center;background:#f8f9fc;color:#283044;font:14px ui-monospace,SFMono-Regular,Consolas,monospace;image-rendering:pixelated}
+main{width:min(760px,94vw);text-align:center}.brand{color:#4361ee;font-size:13px;font-weight:800;letter-spacing:3px}
+h1{font-size:clamp(20px,4vw,30px);margin:14px 0 6px}.help{color:#69738c;margin:0 0 24px}
+.game{padding:18px;background:#fff;border:2px solid #dfe5f5;box-shadow:8px 8px 0 #e7ebf7}
+canvas{display:block;width:100%;height:auto;aspect-ratio:640/180;image-rendering:pixelated;background:#f7f9ff}
+.meta{display:flex;justify-content:space-between;margin:0 0 8px;font-weight:700;color:#59647c}
+.bottom{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:16px;color:#69738c}
+button{font:inherit;font-weight:700;color:#fff;background:#4361ee;border:0;padding:9px 16px;cursor:pointer;box-shadow:3px 3px 0 #bdc9ff}
+button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #bdc9ff}
+@media(max-width:520px){.bottom{flex-wrap:wrap}.game{padding:10px}}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">DELTA BROWSER</div>
+  <h1>Нет подключения к интернету</h1>
+  <p class="help">Проверьте сеть или немного поиграйте, пока она вернётся.</p>
+  <section class="game">
+    <div class="meta"><span>СЧЁТ <b id="score">00000</b></span><span>РЕКОРД <b id="best">00000</b></span></div>
+    <canvas id="game" width="320" height="90" aria-label="Пиксельная игра Delta"></canvas>
+    <div class="bottom"><span>ПРОБЕЛ / ↑ — ПРЫЖОК · ↓ — ПРИСЕСТЬ · БОНУСЫ: +50</span><button id="restart">ЗАНОВО</button></div>
+  </section>
+</main>
+<script>
+(() => {
+  const c=document.querySelector("#game"),ctx=c.getContext("2d"),scoreEl=document.querySelector("#score"),bestEl=document.querySelector("#best");
+  const bestKey="delta.dinoBest",floor=72;
+  let score=0,best=0,speed=2.2,jump=0,vy=0,duck=false,dead=false,frames=0;
+  try{best=Number(localStorage.getItem(bestKey)||0)}catch(_){}
+  let obstacles=[],bonuses=[],dust=[];
+  bestEl.textContent=String(best).padStart(5,"0");
+  function rect(x,y,w,h,color){ctx.fillStyle=color;ctx.fillRect(Math.round(x),Math.round(y),w,h)}
+  function drawDino(){
+    const h=duck?9:17,y=floor-h-Math.floor(jump),x=26;
+    const color="#263b32";
+    rect(x+3,y,duck?18:10,h,color);rect(x+9,y-5,10,9,color);rect(x+16,y-3,2,2,"#f7f9ff");
+    if(!duck){rect(x,y+6,5,4,color);rect(x+4,y+h-3,3,4,color);rect(x+12,y+h-3,3,4,color)}
+  }
+  function draw(){
+    ctx.clearRect(0,0,c.width,c.height);rect(0,floor,320,1,"#aeb8d0");
+    for(let i=0;i<8;i++)rect((i*47-frames*speed*.35)%340,floor+7+(i%2)*3,2,1,"#d1d8e8");
+    drawDino();
+    for(const o of obstacles){
+      if(o.fly){rect(o.x,floor-16,11,5,"#7a6556");rect(o.x+6,floor-19,5,4,"#7a6556");rect(o.x+2,floor-11,2,5,"#7a6556")}
+      else {rect(o.x+3,floor-13,5,13,"#376b4a");rect(o.x,floor-10,4,3,"#376b4a");rect(o.x+6,floor-7,4,3,"#376b4a")}
+    }
+    for(const b of bonuses){
+      const blink=Math.floor(frames/5)%2;
+      rect(b.x+3,floor-25,4,4,blink?"#ffbf3f":"#ffd166");rect(b.x,floor-21,10,3,"#ffbf3f");rect(b.x+3,floor-18,4,4,"#ffbf3f");
+    }
+    if(dead){rect(100,31,120,21,"#fff");ctx.fillStyle="#283044";ctx.font="bold 9px monospace";ctx.textAlign="center";ctx.fillText("ИГРА ОКОНЧЕНА",160,44)}
+  }
+  function tick(){
+    requestAnimationFrame(tick);if(dead){draw();return}frames++;
+    if(jump>0||vy>0){jump+=vy;vy-=.55;if(jump<=0){jump=0;vy=0}}
+    if(frames%95===0)obstacles.push({x:330,fly:score>180&&Math.random()<.24});
+    if(frames%210===0&&Math.random()<.8)bonuses.push({x:330});
+    obstacles.forEach(o=>o.x-=speed);bonuses.forEach(b=>b.x-=speed);
+    obstacles=obstacles.filter(o=>o.x>-12);bonuses=bonuses.filter(b=>b.x>-12);
+    const hit=obstacles.some(o=>o.x<43&&o.x+(o.fly?12:10)>26&&jump<(o.fly?12:14)&&!duck);
+    if(hit){dead=true;best=Math.max(best,score);try{localStorage.setItem(bestKey,String(best))}catch(_){}bestEl.textContent=String(best).padStart(5,"0")}
+    bonuses=bonuses.filter(b=>{if(b.x<46&&b.x+10>26){score+=50;return false}return true});
+    score++;speed=Math.min(5.4,2.2+score/1800);
+    scoreEl.textContent=String(score).padStart(5,"0");draw();
+  }
+  function startJump(){if(dead){restart();return}if(jump===0){vy=7.3;duck=false}}
+  function restart(){score=0;speed=2.2;jump=0;vy=0;duck=false;dead=false;frames=0;obstacles=[];bonuses=[];scoreEl.textContent="00000"}
+  addEventListener("keydown",e=>{if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Space"||e.code==="ArrowUp")startJump();if(e.code==="ArrowDown")duck=true});
+  addEventListener("keyup",e=>{if(e.code==="ArrowDown")duck=false});
+  c.addEventListener("pointerdown",startJump);document.querySelector("#restart").addEventListener("click",restart);
+  draw();requestAnimationFrame(tick);
+})();
+</script>
+</body>
+</html>
