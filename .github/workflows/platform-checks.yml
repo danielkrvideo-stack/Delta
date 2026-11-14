@@ -13,6 +13,7 @@ permissions:
 jobs:
   macos-intel:
     runs-on: macos-15-intel
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Build macOS application
@@ -20,6 +21,7 @@ jobs:
 
   windows-x64:
     runs-on: windows-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Set up .NET
@@ -42,6 +44,7 @@ jobs:
 
   linux-x64:
     runs-on: ubuntu-24.04
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Install GTK, WebKitGTK, and headless display
@@ -51,4 +54,8 @@ jobs:
       - name: Check Python syntax
         run: /usr/bin/python3 -m py_compile Platforms/Linux/delta.py
       - name: Launch browser and verify core behavior
-        run: xvfb-run -a /usr/bin/python3 Platforms/Linux/delta.py --smoke-test
+        env:
+          XDG_CONFIG_HOME: ${{ runner.temp }}/delta-test/config
+          XDG_DATA_HOME: ${{ runner.temp }}/delta-test/data
+          XDG_CACHE_HOME: ${{ runner.temp }}/delta-test/cache
+        run: timeout --signal=TERM 90s xvfb-run -a /usr/bin/python3 -u Platforms/Linux/delta.py --smoke-test
