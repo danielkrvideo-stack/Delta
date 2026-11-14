@@ -3,6 +3,7 @@ import json
 import html
 import os
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
@@ -255,6 +256,7 @@ class DeltaWindow(Gtk.Window):
             if self.notebook.get_n_pages() != 2:
                 raise RuntimeError("Opening the local offline game tab failed")
 
+            self.smoke_deadline = time.monotonic() + 30
             GLib.timeout_add_seconds(2, self.verify_smoke_game)
         except Exception as error:
             self.fail_smoke_test(error)
@@ -264,8 +266,11 @@ class DeltaWindow(Gtk.Window):
     def verify_smoke_game(self):
         try:
             game_view = self.current_view()
-            if "Нет подключения к интернету" not in (game_view.get_title() or ""):
-                raise RuntimeError(f"Local Dino page did not finish loading: {game_view.get_title()!r}")
+            title = game_view.get_title() or ""
+            if "Нет подключения к интернету" not in title:
+                if time.monotonic() < self.smoke_deadline:
+                    return GLib.SOURCE_CONTINUE
+                raise RuntimeError(f"Local Dino page did not finish loading: {title!r}")
             self.state["preferences"]["theme"] = "Dark"
             save_state(self.state)
             saved = json.loads(STATE_PATH.read_text(encoding="utf-8"))
