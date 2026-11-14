@@ -3,15 +3,15 @@
            Manufacturer="Delta Browser"
            Version="$(var.Version)"
            UpgradeCode="86721826-9D8F-45B7-98BD-674642F2E0B8"
-           Scope="perUser"
-           Platform="x64">
+           Scope="perUser">
     <MajorUpgrade DowngradeErrorMessage="A newer version of Delta is already installed." />
     <MediaTemplate EmbedCab="yes" />
     <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="INSTALLFOLDER" Name="Programs\Delta" />
+      <Directory Id="INSTALLFOLDER" Name="Programs\Delta">
+        <Files Include="$(var.PublishDir)\**" />
+      </Directory>
     </StandardDirectory>
     <Feature Id="Main" Title="Delta" Level="1">
-      <ComponentGroupRef Id="AppFiles" />
       <ComponentRef Id="StartMenuShortcut" />
       <ComponentRef Id="HtmlFileAssociation" />
     </Feature>
@@ -40,10 +40,5 @@
       <RegistryValue Root="HKCU" Key="Software\Classes\Delta.HTML\shell\open\command" Type="string"
                      Value="&quot;[INSTALLFOLDER]Delta.exe&quot; &quot;%1&quot;" />
     </Component>
-  </Fragment>
-  <Fragment>
-    <ComponentGroup Id="AppFiles" Directory="INSTALLFOLDER">
-      <Files Include="$(var.PublishDir)\**" />
-    </ComponentGroup>
   </Fragment>
 </Wix>

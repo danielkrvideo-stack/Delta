@@ -30,8 +30,11 @@ if command -v rpmbuild >/dev/null 2>&1; then
   mkdir -p "$SOURCE_DIR"
   cp -R Platforms "$SOURCE_DIR/"
   tar -C "$TOP/SOURCES" -czf "$TOP/SOURCES/delta-browser-$VERSION.tar.gz" "delta-browser-$VERSION"
-  rpmbuild -bb Packaging/delta-browser.spec \
-    --define "_topdir $TOP" --define "version $VERSION" --define "release 1"
+  SPEC="$TOP/SPECS/delta-browser.spec"
+  sed "s/^Version:.*/Version: $VERSION/" \
+    Packaging/delta-browser.spec > "$SPEC"
+  rpmbuild -bb "$SPEC" \
+    --define "_topdir $TOP" --define "release 1"
   RPM_PACKAGE="$(find "$TOP/RPMS" -type f -name '*.rpm' -print -quit)"
   if [[ -z "$RPM_PACKAGE" ]]; then
     echo "RPM build completed without producing an RPM package." >&2
