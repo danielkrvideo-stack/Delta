@@ -20,7 +20,7 @@ cat > "$STAGING/usr/bin/delta" <<'LAUNCHER'
 exec /usr/bin/python3 /usr/lib/delta/Linux/delta.py "$@"
 LAUNCHER
 chmod 0755 "$STAGING/usr/bin/delta"
-sed "s/^Version:.*/Version: $VERSION/" Packaging/debian/control > "$STAGING/DEBIAN/control"
+sed "s/^Version:.*/Version: $VERSION/" Packaging/control > "$STAGING/DEBIAN/control"
 dpkg-deb --build --root-owner-group "$STAGING" "$ROOT/Delta-linux-$ARCH-$VERSION.deb"
 
 if command -v rpmbuild >/dev/null 2>&1; then

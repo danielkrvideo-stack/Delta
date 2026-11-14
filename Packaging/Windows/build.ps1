@@ -22,6 +22,6 @@ if (!(Get-Command wix -ErrorAction SilentlyContinue)) {
     Write-Warning "WiX v4 is not installed; MSI was not created."
     exit 0
 }
-wix build $wxs -arch x64 "-dPublishDir=$publish" "-dVersion=$Version" -o $msi
+wix build $wxs -arch x64 -d "PublishDir=$publish" -d "Version=$Version" -o $msi
 if ($LASTEXITCODE -ne 0) { throw "MSI packaging failed." }
 Write-Host "Installer: $msi"
