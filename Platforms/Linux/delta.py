@@ -254,7 +254,7 @@ class DeltaWindow(Gtk.Window):
                 raise RuntimeError("Bundled offline game is missing")
             game_uri = game.resolve().as_uri()
             print(f"Delta Linux smoke test: opening local game {game_uri}", flush=True)
-            self.new_tab(game_uri, save=False)
+            self.smoke_game_view = self.new_tab(game_uri, save=False)
             if self.notebook.get_n_pages() != 2:
                 raise RuntimeError("Opening the local offline game tab failed")
 
@@ -267,7 +267,7 @@ class DeltaWindow(Gtk.Window):
 
     def verify_smoke_game(self):
         try:
-            game_view = self.current_view()
+            game_view = self.smoke_game_view
             title = game_view.get_title() or ""
             if "Нет подключения к интернету" not in title:
                 if time.monotonic() < self.smoke_deadline:
@@ -384,7 +384,7 @@ class DeltaWindow(Gtk.Window):
     def on_load_changed(self, webview, event):
         if getattr(self, "smoke_test", False):
             print(
-                f"Delta Linux smoke test: WebKit load {event.name}: "
+                f"Delta Linux smoke test: WebKit load {event}: "
                 f"{webview.get_uri()!r} ({webview.get_title()!r})",
                 flush=True,
             )
