@@ -1,0 +1,10 @@
+Package: delta-browser
+Version: 0.1.0
+Section: web
+Priority: optional
+Architecture: amd64
+Maintainer: Delta Browser
+Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-3.0, gir1.2-webkit2-4.1 | gir1.2-webkit2-4.0, libwebkit2gtk-4.1-0 | libwebkit2gtk-4.0-37
+Description: Delta web browser
+ A native GTK and WebKitGTK browser with tabs, bookmarks, history,
+ downloads, persistent website login sessions, and offline game.

@@ -1,0 +1,44 @@
+version: 1
+AppDir:
+  path: ./AppDir
+  app_info:
+    id: com.delta.browser
+    name: Delta
+    icon: delta
+    version: 0.1.0
+    exec: usr/bin/delta
+    exec_args: $@
+  apt:
+    arch: amd64
+    sources:
+      - sourceline: "deb http://archive.ubuntu.com/ubuntu/ jammy main universe"
+    include:
+      - python3
+      - python3-gi
+      - gir1.2-gtk-3.0
+      - gir1.2-webkit2-4.0
+      - libwebkit2gtk-4.0-37
+  files:
+    include:
+      - /usr/bin/python3
+      - /usr/lib/python3/dist-packages/gi
+      - /usr/lib/x86_64-linux-gnu/girepository-1.0/Gtk-3.0.typelib
+      - /usr/lib/x86_64-linux-gnu/girepository-1.0/WebKit2-4.0.typelib
+    exclude:
+      - usr/share/doc
+      - usr/share/man
+  runtime:
+    env:
+      PYTHONPATH: "$APPDIR/usr/lib/python3/dist-packages"
+  after_bundle:
+    - install -Dm755 Platforms/Linux/delta.py AppDir/usr/lib/delta/Linux/delta.py
+    - install -Dm644 Platforms/Shared/dino.html AppDir/usr/lib/delta/Shared/dino.html
+    - install -Dm644 Platforms/Linux/delta.svg AppDir/usr/share/icons/hicolor/scalable/apps/delta.svg
+    - mkdir -p AppDir/usr/bin
+    - printf '#!/bin/sh\nexec "$APPDIR/usr/bin/python3" "$APPDIR/usr/lib/delta/Linux/delta.py" "$@"\n' > AppDir/usr/bin/delta
+    - chmod +x AppDir/usr/bin/delta
+    - cp Platforms/Linux/com.delta.browser.desktop AppDir/com.delta.browser.desktop
+AppImage:
+  arch: x86_64
+  update-information: None
+  sign-key: None
