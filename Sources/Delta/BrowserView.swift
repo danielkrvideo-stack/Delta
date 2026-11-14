@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 import WebKit
 
 @main
@@ -13,6 +14,10 @@ struct DeltaApp: App {
         }
         .commands {
             CommandGroup(replacing: .newItem) {
+                Button("Открыть HTML-файл…") {
+                    NotificationCenter.default.post(name: .deltaOpenHTMLFile, object: nil)
+                }
+                .keyboardShortcut("o", modifiers: .command)
                 Button("Новая вкладка") { BrowserStore.active?.newTab() }
                     .keyboardShortcut("t", modifiers: .command)
                 Button("Новое окно") { NotificationCenter.default.post(name: .deltaNewWindow, object: nil) }
@@ -43,6 +48,8 @@ struct DeltaApp: App {
 }
 
 final class DeltaApplicationDelegate: NSObject, NSApplicationDelegate {
+    @MainActor private static var pendingHTMLFiles: [URL] = []
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         guard let iconURL = Bundle.main.url(forResource: "AppIcon", withExtension: "icns"),
               let icon = NSImage(contentsOf: iconURL) else {
@@ -51,12 +58,43 @@ final class DeltaApplicationDelegate: NSObject, NSApplicationDelegate {
         }
         NSApp.applicationIconImage = icon
     }
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        Self.enqueueHTMLFiles(urls)
+    }
+
+    func application(_ sender: NSApplication, openFiles filenames: [String]) {
+        Self.enqueueHTMLFiles(filenames.map { URL(fileURLWithPath: $0) })
+        sender.reply(toOpenOrPrint: .success)
+    }
+
+    private static func enqueueHTMLFiles(_ urls: [URL]) {
+        let files = urls.filter {
+            ["html", "htm", "xhtml"].contains($0.pathExtension.lowercased())
+        }
+        guard !files.isEmpty else { return }
+        Task { @MainActor in
+            if let store = BrowserStore.active {
+                files.forEach { store.openHTMLFile($0) }
+            } else {
+                pendingHTMLFiles.append(contentsOf: files)
+            }
+        }
+    }
+
+    @MainActor
+    static func openPendingHTMLFiles(for store: BrowserStore) {
+        let files = pendingHTMLFiles
+        pendingHTMLFiles.removeAll()
+        files.forEach { store.openHTMLFile($0) }
+    }
 }
 
 extension Notification.Name {
     static let deltaNewWindow = Notification.Name("delta.newWindow")
     static let deltaClearHistory = Notification.Name("delta.clearHistory")
     static let deltaCheckUpdates = Notification.Name("delta.checkUpdates")
+    static let deltaOpenHTMLFile = Notification.Name("delta.openHTMLFile")
 }
 
 struct BrowserWindow: View {
@@ -69,6 +107,7 @@ struct BrowserWindow: View {
     @ObservedObject private var updateManager = UpdateManager.shared
     @State private var showingUpdateNotice = false
     @State private var updateAlertTitle = "Обновление Delta"
+    @State private var showingDocumentError = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -92,6 +131,9 @@ struct BrowserWindow: View {
             if BrowserStore.active === store { newWindow() }
         }
         .onReceive(NotificationCenter.default.publisher(for: .deltaClearHistory)) { _ in store.clearHistory() }
+        .onReceive(NotificationCenter.default.publisher(for: .deltaOpenHTMLFile)) { _ in
+            openHTMLFilePanel()
+        }
         .onReceive(NotificationCenter.default.publisher(for: .deltaCheckUpdates)) { _ in
             Task {
                 await updateManager.checkForUpdates(showStatus: true)
@@ -108,7 +150,11 @@ struct BrowserWindow: View {
         .onAppear {
             BrowserStore.active = store
             addressText = store.selectedTab?.address ?? ""
+            DeltaApplicationDelegate.openPendingHTMLFiles(for: store)
             Task { await updateManager.checkForUpdates() }
+        }
+        .onChange(of: store.documentOpenError) { message in
+            showingDocumentError = message != nil
         }
         .onChange(of: updateManager.updateStatus) { _ in
             if case .failed = updateManager.state {
@@ -120,6 +166,11 @@ struct BrowserWindow: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(updateManager.updateStatus)
+        }
+        .alert("Не удалось открыть HTML-файл", isPresented: $showingDocumentError) {
+            Button("OK") { store.documentOpenError = nil }
+        } message: {
+            Text(store.documentOpenError ?? "")
         }
         .background(WindowActivationObserver(store: store))
         .sheet(item: $panel) { panel in
@@ -264,6 +315,20 @@ struct BrowserWindow: View {
 
     private func newWindow() {
         openWindow(id: "main")
+    }
+
+    private func openHTMLFilePanel() {
+        let openPanel = NSOpenPanel()
+        openPanel.title = "Открыть HTML-файл"
+        openPanel.prompt = "Открыть"
+        openPanel.canChooseFiles = true
+        openPanel.canChooseDirectories = false
+        openPanel.allowsMultipleSelection = false
+        openPanel.allowedContentTypes = ["html", "htm", "xhtml"].compactMap {
+            UTType(filenameExtension: $0)
+        }
+        guard openPanel.runModal() == .OK, let url = openPanel.url else { return }
+        store.openHTMLFile(url)
     }
 }
 
