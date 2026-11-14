@@ -1,0 +1,39 @@
+name: Build and publish Intel release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15-intel
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build Delta.app
+        env:
+          DELTA_VERSION: ${{ github.ref_name }}
+          DELTA_BUILD_NUMBER: ${{ github.run_number }}
+        run: |
+          VERSION="${DELTA_VERSION#v}"
+          DELTA_VERSION="$VERSION" ./build-app.sh
+
+      - name: Package Intel app
+        run: |
+          ditto -c -k --sequesterRsrc --keepParent Delta.app Delta-macos-intel.zip
+          shasum -a 256 Delta-macos-intel.zip > Delta-macos-intel.zip.sha256
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            Delta-macos-intel.zip \
+            Delta-macos-intel.zip.sha256 \
+            --title "Delta $GITHUB_REF_NAME" \
+            --generate-notes
