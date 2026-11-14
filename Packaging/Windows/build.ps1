@@ -22,6 +22,12 @@ if (!(Get-Command wix -ErrorAction SilentlyContinue)) {
     Write-Warning "WiX v4 is not installed; MSI was not created."
     exit 0
 }
-wix build $wxs -arch x64 -d "PublishDir=$publish" -d "Version=$Version" -o $msi
+$harvested = Join-Path $root ".build/windows-appfiles.wxs"
+wix extension add --global WixToolset.Heat/4.0.5
+if ($LASTEXITCODE -ne 0) { throw "WiX Heat extension installation failed." }
+wix heat dir $publish -nologo -cg AppFiles -dr INSTALLFOLDER -gg -sfrag -sreg -srd `
+    -var var.PublishDir -out $harvested
+if ($LASTEXITCODE -ne 0) { throw "Harvesting Windows application files failed." }
+wix build $wxs $harvested -arch x64 -d "PublishDir=$publish" -d "Version=$Version" -o $msi
 if ($LASTEXITCODE -ne 0) { throw "MSI packaging failed." }
 Write-Host "Installer: $msi"

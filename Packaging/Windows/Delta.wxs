@@ -7,11 +7,10 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of Delta is already installed." />
     <MediaTemplate EmbedCab="yes" />
     <StandardDirectory Id="LocalAppDataFolder">
-      <Directory Id="INSTALLFOLDER" Name="Programs\Delta">
-        <Files Include="$(var.PublishDir)\**" />
-      </Directory>
+      <Directory Id="INSTALLFOLDER" Name="Programs\Delta" />
     </StandardDirectory>
     <Feature Id="Main" Title="Delta" Level="1">
+      <ComponentGroupRef Id="AppFiles" />
       <ComponentRef Id="StartMenuShortcut" />
       <ComponentRef Id="HtmlFileAssociation" />
     </Feature>
