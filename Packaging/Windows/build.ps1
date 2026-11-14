@@ -23,9 +23,9 @@ if (!(Get-Command wix -ErrorAction SilentlyContinue)) {
     exit 0
 }
 $harvested = Join-Path $root ".build/windows-appfiles.wxs"
-wix extension add --global WixToolset.Heat/4.0.5
+wix extension add --global WixToolset.Heat/5.0.2
 if ($LASTEXITCODE -ne 0) { throw "WiX Heat extension installation failed." }
-wix heat dir $publish -nologo -cg AppFiles -dr INSTALLFOLDER -gg -sfrag -sreg -srd `
+wix harvest dir $publish -nologo -cg AppFiles -dr INSTALLFOLDER -gg -sfrag -sreg -srd `
     -var var.PublishDir -out $harvested
 if ($LASTEXITCODE -ne 0) { throw "Harvesting Windows application files failed." }
 wix build $wxs $harvested -arch x64 -d "PublishDir=$publish" -d "Version=$Version" -o $msi

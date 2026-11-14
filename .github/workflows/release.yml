@@ -48,8 +48,8 @@ jobs:
         with:
           dotnet-version: 8.0.x
 
-      - name: Install WiX v4
-        run: dotnet tool install --global wix --version 4.0.5
+      - name: Install WiX v5
+        run: dotnet tool install --global wix --version 5.0.2
 
       - name: Build Windows x64 app and installer
         shell: pwsh

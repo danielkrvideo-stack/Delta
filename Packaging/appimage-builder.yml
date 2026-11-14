@@ -6,8 +6,8 @@ AppDir:
     name: Delta
     icon: delta
     version: 0.1.0
-    exec: usr/bin/delta
-    exec_args: $@
+    exec: usr/bin/python3
+    exec_args: "$APPDIR/usr/lib/delta/Linux/delta.py $@"
   apt:
     arch: amd64
     sources:
