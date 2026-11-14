@@ -258,6 +258,7 @@ class DeltaWindow(Gtk.Window):
             GLib.timeout_add_seconds(2, self.verify_smoke_game)
         except Exception as error:
             self.fail_smoke_test(error)
+            self.destroy()
         return GLib.SOURCE_REMOVE
 
     def verify_smoke_game(self):
@@ -733,6 +734,12 @@ def main():
     DATA_HOME.mkdir(parents=True, exist_ok=True)
     CACHE_HOME.mkdir(parents=True, exist_ok=True)
     smoke_test = "--smoke-test" in sys.argv[1:]
+    if smoke_test:
+        state = load_state()
+        state["preferences"]["newTabMode"] = "about"
+        state["preferences"]["startupMode"] = "about"
+        state["openTabs"] = []
+        save_state(state)
     args = [arg for arg in sys.argv[1:] if arg != "--smoke-test"]
     open_file = args[0] if args else None
     window = DeltaWindow(open_file, smoke_test=smoke_test)
