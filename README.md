@@ -50,13 +50,15 @@ The native browser engines and platform user profiles are intentionally separate
 
 The macOS DMG can be created on macOS with `bash Packaging/build-macos-dmg.sh`. The current macOS build script produces an Intel app; Apple Silicon and Windows/Linux runtime behavior require testing on those operating systems before claiming platform certification.
 
-## Publishing an update
+## Downloading and publishing releases
 
-Push the source to `danielkrvideo-stack/Delta`, then push a version tag to publish an Intel release:
+Download the latest builds from the repository's [Releases](https://github.com/danielkrvideo-stack/Delta/releases) page. Windows releases include an x64 MSI installer and a portable ZIP. Linux releases include DEB, RPM, and AppImage packages. Windows requires the Microsoft Edge WebView2 Evergreen Runtime; the application links to Microsoft's installer if the runtime is missing. Debian/RPM packages use the distribution's GTK and WebKitGTK dependencies; AppImage still requires a compatible Linux graphics stack.
+
+To publish a new release, push the source to `danielkrvideo-stack/Delta`, then push a version tag:
 
 ```sh
-git tag v0.1.1
-git push origin v0.1.1
+git tag v0.1.7
+git push origin v0.1.7
 ```
 
-GitHub Actions builds `Delta-macos-intel.zip` and its SHA-256 checksum. Delta checks the latest public GitHub release and offers updates from the browser toolbar. Installers must be stored in a folder the current macOS user can modify; `/Applications` may require administrator permissions.
+GitHub Actions builds the Intel macOS archive, Windows MSI and portable ZIP, and Linux DEB, RPM, and AppImage, then attaches them to the tagged GitHub release with SHA-256 checksums. Delta checks the latest public GitHub release and offers updates from the browser toolbar on macOS. Installers must be stored in a folder the current macOS user can modify; `/Applications` may require administrator permissions.
