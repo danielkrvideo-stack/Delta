@@ -50,9 +50,25 @@ The native browser engines and platform user profiles are intentionally separate
 
 The macOS DMG can be created on macOS with `bash Packaging/build-macos-dmg.sh`. The current macOS build script produces an Intel app; Apple Silicon and Windows/Linux runtime behavior require testing on those operating systems before claiming platform certification.
 
+## Android
+
+The Android app is in `app/` and uses Kotlin, Jetpack Compose, Android System WebView, and AndroidX WebKit to serve the bundled offline game locally. It supports Android 6.0 (API 23) and later, including the Galaxy A32 5G and other phones, tablets, foldables, and resizable Samsung DeX windows. The layout adapts to window size and orientation; physical keyboards and touch/stylus input are handled by Android and WebView.
+
+Open the repository root in Android Studio, or build from the command line with JDK 17 and Android SDK platform 35:
+
+```sh
+./gradlew testDebugUnitTest assembleDebug bundleRelease
+```
+
+The installable debug APK is `app/build/outputs/apk/debug/app-debug.apk`. The release App Bundle is `app/build/outputs/bundle/release/app-release.aab`. GitHub Releases publish the debug APK for testing and an unsigned AAB unless signing secrets are configured. To sign a local release for Google Play, set `DELTA_RELEASE_STORE_FILE`, `DELTA_RELEASE_STORE_PASSWORD`, `DELTA_RELEASE_KEY_ALIAS`, and `DELTA_RELEASE_KEY_PASSWORD` in the build environment before running `./gradlew bundleRelease`; never commit the signing key or credentials. For signed Android release assets in GitHub Actions, configure `ANDROID_SIGNING_KEY_BASE64` (base64-encoded upload keystore), `ANDROID_SIGNING_STORE_PASSWORD`, `ANDROID_SIGNING_KEY_ALIAS`, and `ANDROID_SIGNING_KEY_PASSWORD` repository secrets. Play Console requires a signed upload bundle.
+
+Android stores browser preferences, bookmarks, quick links, history, and open tabs in the app's private data directory. Bookmarks and start-page quick links are separate lists. WebView cookies and login sessions stay in its Android app profile. Downloaded files are stored in Delta's app-specific Downloads folder and can be opened from the browser's Downloads list. The HTML file picker asks for access only when a file is selected. No Delta account or cloud sync is used.
+
+On macOS, the release DMG contains `Delta.app` and an `Applications` shortcut; drag Delta onto Applications to install it. The ZIP remains available for users who prefer to unpack the app manually.
+
 ## Downloading and publishing releases
 
-Download the latest builds from the repository's [Releases](https://github.com/danielkrvideo-stack/Delta/releases) page. Windows releases include an x64 MSI installer and a portable ZIP. Linux releases include DEB, RPM, and AppImage packages. Windows requires the Microsoft Edge WebView2 Evergreen Runtime; the application links to Microsoft's installer if the runtime is missing. Debian/RPM packages use the distribution's GTK and WebKitGTK dependencies; AppImage still requires a compatible Linux graphics stack.
+Download the latest builds from the repository's [Releases](https://github.com/danielkrvideo-stack/Delta/releases) page. macOS releases include an Intel ZIP and a drag-to-Applications DMG. Windows releases include an x64 MSI installer and a portable ZIP. Linux releases include DEB, RPM, and AppImage packages. Android releases include a debug APK for device testing and an unsigned AAB for signing before Google Play upload. Windows requires the Microsoft Edge WebView2 Evergreen Runtime; the application links to Microsoft's installer if the runtime is missing. Debian/RPM packages use the distribution's GTK and WebKitGTK dependencies; AppImage still requires a compatible Linux graphics stack.
 
 To publish a new release, push the source to `danielkrvideo-stack/Delta`, then push a version tag:
 

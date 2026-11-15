@@ -26,14 +26,14 @@ button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #bdc9ff}
   <section class="game">
     <div class="meta"><span>СЧЁТ <b id="score">00000</b></span><span>РЕКОРД <b id="best">00000</b></span></div>
     <canvas id="game" width="320" height="90" aria-label="Пиксельная игра Delta"></canvas>
-    <div class="bottom"><span>ПРОБЕЛ / ↑ — ПРЫЖОК · ↓ — ПРИСЕСТЬ · БОНУСЫ: +50</span><button id="restart">ЗАНОВО</button></div>
+    <div class="bottom"><span>ПРОБЕЛ / ↑ / КАСАНИЕ — ПРЫЖОК · ↓ / СВАЙП ВНИЗ — ПРИСЕСТЬ · БОНУСЫ: +50</span><button id="restart">ЗАНОВО</button></div>
   </section>
 </main>
 <script>
 (() => {
   const c=document.querySelector("#game"),ctx=c.getContext("2d"),scoreEl=document.querySelector("#score"),bestEl=document.querySelector("#best");
   const bestKey="delta.dinoBest",floor=72;
-  let score=0,best=0,speed=2.2,jump=0,vy=0,duck=false,dead=false,frames=0;
+  let score=0,best=0,speed=2.2,jump=0,vy=0,duck=false,started=false,dead=false,frames=0;
   try{best=Number(localStorage.getItem(bestKey)||0)}catch(_){}
   let obstacles=[],bonuses=[],dust=[];
   bestEl.textContent=String(best).padStart(5,"0");
@@ -56,10 +56,10 @@ button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #bdc9ff}
       const blink=Math.floor(frames/5)%2;
       rect(b.x+3,floor-25,4,4,blink?"#ffbf3f":"#ffd166");rect(b.x,floor-21,10,3,"#ffbf3f");rect(b.x+3,floor-18,4,4,"#ffbf3f");
     }
-    if(dead){rect(100,31,120,21,"#fff");ctx.fillStyle="#283044";ctx.font="bold 9px monospace";ctx.textAlign="center";ctx.fillText("ИГРА ОКОНЧЕНА",160,44)}
+    if(!started||dead){rect(100,31,120,21,"#fff");ctx.fillStyle="#283044";ctx.font="bold 9px monospace";ctx.textAlign="center";ctx.fillText(dead?"ИГРА ОКОНЧЕНА":"НАЖМИТЕ, ЧТОБЫ НАЧАТЬ",160,44)}
   }
   function tick(){
-    requestAnimationFrame(tick);if(dead){draw();return}frames++;
+    requestAnimationFrame(tick);if(!started||dead){draw();return}frames++;
     if(jump>0||vy>0){jump+=vy;vy-=.55;if(jump<=0){jump=0;vy=0}}
     if(frames%95===0)obstacles.push({x:330,fly:score>180&&Math.random()<.24});
     if(frames%210===0&&Math.random()<.8)bonuses.push({x:330});
@@ -71,11 +71,19 @@ button:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #bdc9ff}
     score++;speed=Math.min(5.4,2.2+score/1800);
     scoreEl.textContent=String(score).padStart(5,"0");draw();
   }
-  function startJump(){if(dead){restart();return}if(jump===0){vy=7.3;duck=false}}
-  function restart(){score=0;speed=2.2;jump=0;vy=0;duck=false;dead=false;frames=0;obstacles=[];bonuses=[];scoreEl.textContent="00000"}
+  function startJump(){if(dead){restart();return}if(!started)started=true;if(jump===0){vy=7.3;duck=false}}
+  function restart(){score=0;speed=2.2;jump=0;vy=0;duck=false;started=false;dead=false;frames=0;obstacles=[];bonuses=[];scoreEl.textContent="00000"}
   addEventListener("keydown",e=>{if(["Space","ArrowUp","ArrowDown"].includes(e.code))e.preventDefault();if(e.code==="Space"||e.code==="ArrowUp")startJump();if(e.code==="ArrowDown")duck=true});
   addEventListener("keyup",e=>{if(e.code==="ArrowDown")duck=false});
-  c.addEventListener("pointerdown",startJump);document.querySelector("#restart").addEventListener("click",restart);
+  let touchStart=null,touchMoved=false;
+  c.style.touchAction="none";
+  c.tabIndex=0;
+  c.addEventListener("pointerdown",e=>{if(e.pointerType!=="touch"){c.focus();startJump()}});
+  c.addEventListener("touchstart",e=>{if(e.changedTouches.length){touchStart=e.changedTouches[0].clientY;touchMoved=false;e.preventDefault()}},{passive:false});
+  c.addEventListener("touchmove",e=>{if(touchStart!==null&&e.changedTouches.length){const distance=e.changedTouches[0].clientY-touchStart;if(distance>18){touchMoved=true;duck=true}e.preventDefault()}},{passive:false});
+  c.addEventListener("touchend",e=>{if(touchStart!==null){const distance=e.changedTouches.length?e.changedTouches[0].clientY-touchStart:0;if(distance<18&&!touchMoved)startJump();duck=false;touchStart=null;touchMoved=false;e.preventDefault()}},{passive:false});
+  c.addEventListener("touchcancel",()=>{duck=false;touchStart=null;touchMoved=false});
+  document.querySelector("#restart").addEventListener("click",restart);
   draw();requestAnimationFrame(tick);
 })();
 </script>

@@ -29,6 +29,8 @@ playground.xcworkspace
 # .swiftpm
 
 .build/
+.gradle/
+.kotlin/
 Delta.app/
 .DS_Store
 .vscode/
@@ -67,6 +69,10 @@ fastlane/test_output
 Platforms/**/bin/
 Platforms/**/obj/
 Platforms/**/__pycache__/
+**/build/
+local.properties
+*.jks
+*.keystore
 Delta-macos-intel-*.dmg
 Delta-windows-x64-*.msi
 Delta-windows-x64-*.zip

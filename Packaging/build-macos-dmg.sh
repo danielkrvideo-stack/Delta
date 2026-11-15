@@ -3,7 +3,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-./build-app.sh
+if [[ "${DELTA_APP_ALREADY_BUILT:-false}" != "true" ]]; then
+  bash ./build-app.sh
+fi
 VERSION="${DELTA_VERSION:-0.1.0}"
 DMG="Delta-macos-intel-${VERSION}.dmg"
 STAGING="$(mktemp -d)"
